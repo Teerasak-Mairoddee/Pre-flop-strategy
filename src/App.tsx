@@ -7,7 +7,7 @@ import { ResultPanel } from './components/ResultPanel';
 import { Segmented } from './components/Segmented';
 import { recommend, villainOptions, type Situation, type Spot } from './strategy/engine';
 import { handCode, isRank, type HandCode, type Rank } from './strategy/hands';
-import { POSITIONS, POSITION_NAMES, type Position } from './strategy/positions';
+import { POSITIONS, POSITION_ABOUT, POSITION_NAMES, type Position } from './strategy/positions';
 
 const SITUATIONS: { value: Situation; label: string }[] = [
   { value: 'unopened', label: 'Folded to me' },
@@ -104,6 +104,12 @@ export default function App() {
             onChange={changeHero}
             testId="seat"
           />
+          <details className="seat-about" data-testid="seat-about">
+            <summary>
+              About this seat: <strong>{POSITION_NAMES[hero]}</strong>
+            </summary>
+            <p>{POSITION_ABOUT[hero]}</p>
+          </details>
           <Segmented label="Action before me" value={situation} options={situationOptions} onChange={changeSituation} testId="situation" />
           {vOpts.length ? (
             <Segmented

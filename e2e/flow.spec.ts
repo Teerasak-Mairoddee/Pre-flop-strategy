@@ -24,3 +24,13 @@ test('pick a spot and a hand, get advice', async ({ page }) => {
   await page.getByRole('gridcell', { name: /^K9o/ }).click();
   await expect(page.getByTestId('move')).toHaveText('CALL');
 });
+
+test('explains the selected seat', async ({ page }) => {
+  await page.goto('./');
+  const about = page.getByTestId('seat-about');
+  await expect(about).toContainText('Button');
+  await page.getByTestId('seat').getByRole('radio', { name: 'UTG' }).click();
+  await about.locator('summary').click();
+  await expect(about).toContainText('Under the gun');
+  await expect(about).toContainText('First to act');
+});

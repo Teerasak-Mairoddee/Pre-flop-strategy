@@ -11,6 +11,16 @@ export const POSITION_NAMES: Record<Position, string> = {
   BB: 'Big blind',
 };
 
+/** One-line explanation of each seat, shown under the seat picker. */
+export const POSITION_ABOUT: Record<Position, string> = {
+  UTG: 'First to act before the flop, with five players still to act behind you. Play your tightest range here.',
+  HJ: 'Second to act. Four players are left behind you, so you can open a few more hands than UTG.',
+  CO: 'The seat right before the button. Only the button and the blinds are left, so your range widens a lot.',
+  BTN: 'The dealer seat. You act last on every street after the flop, which makes it the best seat and the widest opening range.',
+  SB: 'You have already posted half a big blind, but you act first on every street after the flop, which makes it the hardest seat to play.',
+  BB: 'You have already posted a full big blind and act last before the flop, so you get a good price to defend with many hands.',
+};
+
 export const seat = (p: Position): number => POSITIONS.indexOf(p);
 
 /** Positions that act before `p` preflop. */

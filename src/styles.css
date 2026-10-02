@@ -482,3 +482,24 @@ button:disabled {
   border-radius: 3px;
   display: inline-block;
 }
+
+/* Seat explainer */
+.seat-about {
+  margin-top: -4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.seat-about summary {
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.seat-about strong {
+  color: var(--text);
+}
+
+.seat-about p {
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
