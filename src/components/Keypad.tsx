@@ -6,8 +6,8 @@ type Props = {
   disabled?: boolean;
 };
 
-// Three columns from ace down, with the deuce as a full-width key underneath.
-const LAYOUT: readonly Rank[] = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+// Three columns from the deuce up, with the ace as a full-width key underneath.
+const LAYOUT: readonly Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 
 export function Keypad({ label, onPick, disabled }: Props) {
   return (
@@ -20,7 +20,7 @@ export function Keypad({ label, onPick, disabled }: Props) {
           <button
             key={r}
             type="button"
-            className={`key${r === '2' ? ' key-wide' : ''}`}
+            className={`key${r === 'A' ? ' key-wide' : ''}`}
             onClick={() => onPick(r)}
             disabled={disabled}
             aria-label={r === 'A' ? 'Ace' : r === 'K' ? 'King' : r === 'Q' ? 'Queen' : r === 'J' ? 'Jack' : undefined}
