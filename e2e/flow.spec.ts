@@ -34,3 +34,21 @@ test('explains the selected seat', async ({ page }) => {
   await expect(about).toContainText('Under the gun');
   await expect(about).toContainText('First to act');
 });
+
+test('table size limits the seats', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.getByTestId('seat').getByRole('radio')).toHaveCount(6);
+  await page.getByTestId('settings-toggle').click();
+  await page.getByTestId('players').getByRole('radio', { name: '4' }).click();
+  await expect(page.getByTestId('game-summary')).toHaveText('4 players · 100 BB');
+  await expect(page.getByTestId('seat').getByRole('radio')).toHaveText(['CO', 'BTN', 'SB', 'BB']);
+
+  // The big blind can only face raises from seats that are dealt in.
+  await page.getByTestId('seat').getByRole('radio', { name: 'BB' }).click();
+  await page.getByTestId('situation').getByRole('radio', { name: 'Facing a raise' }).click();
+  await expect(page.getByTestId('villain').getByRole('radio')).toHaveText(['CO', 'BTN', 'SB']);
+
+  // The choice survives a reload.
+  await page.reload();
+  await expect(page.getByTestId('game-summary')).toHaveText('4 players · 100 BB');
+});

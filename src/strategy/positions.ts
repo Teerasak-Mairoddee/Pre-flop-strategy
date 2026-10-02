@@ -21,6 +21,16 @@ export const POSITION_ABOUT: Record<Position, string> = {
   BB: 'You have already posted a full big blind and act last before the flop, so you get a good price to defend with many hands.',
 };
 
+/** Table sizes the ranges cover. Fewer players removes seats from the front (UTG first). */
+export const PLAYER_OPTIONS = [3, 4, 5, 6] as const;
+export type Players = (typeof PLAYER_OPTIONS)[number];
+
+/**
+ * Seats that exist with `players` at the table. Short-handed tables drop the earliest seats,
+ * so each remaining seat has the same players behind it as at 6-max and keeps its 6-max range.
+ */
+export const seatsFor = (players: Players): Position[] => POSITIONS.slice(POSITIONS.length - players);
+
 export const seat = (p: Position): number => POSITIONS.indexOf(p);
 
 /** Positions that act before `p` preflop. */

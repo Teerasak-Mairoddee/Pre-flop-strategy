@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ALL_HANDS } from '../src/strategy/hands';
 import { POSITIONS, type Position } from '../src/strategy/positions';
 import { hands, RFI, vs3Bet, vsOpen, type Response } from '../src/strategy/ranges';
-import { actionFor, recommend, spotProblem, villainOptions, type Spot } from '../src/strategy/engine';
+import { actionFor, recommend, situationsFor, spotProblem, villainOptions, type Spot } from '../src/strategy/engine';
+import { seatsFor } from '../src/strategy/positions';
 
 const openers = ['UTG', 'HJ', 'CO', 'BTN', 'SB'] as const;
 const allResponses: [string, Response][] = [
@@ -51,6 +52,8 @@ describe('engine', () => {
 
   it('rejects impossible spots', () => {
     expect(spotProblem(spot('UTG', 'vs-open', 'HJ'))).not.toBeNull();
+    expect(spotProblem({ ...spot('CO', 'vs-open', 'UTG'), players: 4 })).not.toBeNull();
+    expect(spotProblem({ ...spot('UTG', 'unopened'), players: 5 })).not.toBeNull();
     expect(spotProblem(spot('CO', 'vs-open', 'BTN'))).not.toBeNull();
     expect(spotProblem(spot('BB', 'vs-3bet', 'SB'))).not.toBeNull();
     expect(spotProblem(spot('BTN', 'vs-3bet', 'CO'))).not.toBeNull();
@@ -87,5 +90,25 @@ describe('engine', () => {
           for (const h of ALL_HANDS) expect(recommend(s, h).status, `${hero} ${situation} ${villain} ${h}`).toBe('advice');
         }
       }
+  });
+});
+
+describe('table size', () => {
+  it('drops seats from the front', () => {
+    expect(seatsFor(6)).toEqual(['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB']);
+    expect(seatsFor(4)).toEqual(['CO', 'BTN', 'SB', 'BB']);
+    expect(seatsFor(3)).toEqual(['BTN', 'SB', 'BB']);
+  });
+
+  it('only offers openers who are at the table', () => {
+    expect(villainOptions('BB', 'vs-open', 4)).toEqual(['CO', 'BTN', 'SB']);
+    expect(situationsFor('CO', 4)).toEqual(['unopened', 'vs-3bet']);
+    expect(situationsFor('BTN', 3)).toEqual(['unopened', 'vs-3bet']);
+  });
+
+  it('keeps the 6-max range for a seat at a shorter table', () => {
+    expect(actionFor('K9o', { hero: 'CO', situation: 'unopened', villain: null, players: 4 })).toBe(
+      actionFor('K9o', { hero: 'CO', situation: 'unopened', villain: null }),
+    );
   });
 });

@@ -23,7 +23,7 @@ npm run build        # outputs dist/
 - `src/strategy/positions.ts` – 6-max seats (UTG, HJ, CO, BTN, SB, BB), acting order and who has position after the flop.
 - `src/strategy/ranges.ts` – the range data: opening ranges per seat, responses to an open (3-bet or call), and responses to a 3-bet after you opened (4-bet or call).
 - `src/strategy/engine.ts` – pure `recommend(spot, hand): Advice` and `actionFor(hand, spot)`. Impossible spots (UTG facing a raise, BB facing a 3-bet as opener) are rejected with a reason.
-- `src/components/` – React UI. Nothing is stored.
+- `src/components/` – React UI. Only the table size is saved on the device.
 
 ## Spots covered
 
@@ -32,6 +32,8 @@ npm run build        # outputs dist/
 | Folded to me | any seat (BB gets a walk) | Raise / Fold |
 | Facing a raise | any opener before you | 3-bet / Call / Fold |
 | Facing a 3-bet | you opened, anyone behind re-raised | 4-bet / Call / Fold |
+
+The settings button (top right) sets the number of players, 3 to 6. Shorter tables drop the earliest seats (UTG first, then HJ, then CO), and every remaining seat keeps its 6-max strategy because it has the same number of players behind it. The choice is saved on the device.
 
 Responses are grouped by opener: early (UTG, HJ) and late (CO, BTN), plus a separate big blind vs small blind range. The small blind plays 3-bet or fold. Sizings: open 2.5 BB (3 BB from the SB), 3-bet about 3× in position and 4× out of position, 4-bet about 2.2× in position and 2.5× out of position.
 

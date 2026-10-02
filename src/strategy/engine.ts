@@ -1,5 +1,5 @@
 import { handLabel, rangePercent, type HandCode } from './hands';
-import { after, before, inPosition, POSITION_NAMES, type Position } from './positions';
+import { after, before, inPosition, POSITION_NAMES, seatsFor, type Players, type Position } from './positions';
 import { hands, RFI, vs3Bet, vsOpen } from './ranges';
 
 export type Situation = 'unopened' | 'vs-open' | 'vs-3bet';
@@ -9,6 +9,8 @@ export type Spot = {
   situation: Situation;
   /** The opener (vs-open) or the 3-bettor (vs-3bet). Ignored when unopened. */
   villain: Position | null;
+  /** Players dealt in; defaults to 6. */
+  players?: Players;
 };
 
 export type Action = 'raise' | '3bet' | '4bet' | 'call' | 'fold';
@@ -26,17 +28,26 @@ export type Advice =
     };
 
 /** Villains that make sense for this hero and situation. */
-export function villainOptions(hero: Position, situation: Situation): Position[] {
-  if (situation === 'vs-open') return before(hero);
+export function villainOptions(hero: Position, situation: Situation, players: Players = 6): Position[] {
+  const seats = seatsFor(players);
+  if (situation === 'vs-open') return before(hero).filter((p) => seats.includes(p));
   if (situation === 'vs-3bet') return hero === 'BB' ? [] : after(hero);
   return [];
 }
 
+/** Situations that can happen from this seat. */
+export function situationsFor(hero: Position, players: Players = 6): Situation[] {
+  return (['unopened', 'vs-open', 'vs-3bet'] as const).filter((s) => s === 'unopened' || villainOptions(hero, s, players).length > 0);
+}
+
 /** Checks the spot can happen at the table; returns why not, or null. */
 export function spotProblem(spot: Spot): string | null {
-  if (spot.situation === 'vs-open' && spot.hero === 'UTG') return 'Nobody acts before UTG, so there is no raise to face.';
+  const players = spot.players ?? 6;
+  if (!seatsFor(players).includes(spot.hero)) return `There is no ${spot.hero} seat with ${players} players.`;
+  if (spot.situation === 'vs-open' && villainOptions(spot.hero, 'vs-open', players).length === 0)
+    return `Nobody acts before the ${POSITION_NAMES[spot.hero].toLowerCase()}, so there is no raise to face.`;
   if (spot.situation === 'vs-3bet' && spot.hero === 'BB') return 'The big blind never opens, so it cannot face a 3-bet as the opener.';
-  if (spot.villain && spot.situation !== 'unopened' && !villainOptions(spot.hero, spot.situation).includes(spot.villain)) {
+  if (spot.villain && spot.situation !== 'unopened' && !villainOptions(spot.hero, spot.situation, players).includes(spot.villain)) {
     return spot.situation === 'vs-open'
       ? `The opener must act before the ${POSITION_NAMES[spot.hero].toLowerCase()}.`
       : `The 3-bettor must act after the ${POSITION_NAMES[spot.hero].toLowerCase()}.`;

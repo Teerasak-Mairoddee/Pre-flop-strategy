@@ -5,9 +5,9 @@ import { Keypad } from './components/Keypad';
 import { RangeGrid } from './components/RangeGrid';
 import { ResultPanel } from './components/ResultPanel';
 import { Segmented } from './components/Segmented';
-import { recommend, villainOptions, type Situation, type Spot } from './strategy/engine';
+import { recommend, situationsFor, villainOptions, type Situation, type Spot } from './strategy/engine';
 import { handCode, isRank, type HandCode, type Rank } from './strategy/hands';
-import { POSITIONS, POSITION_ABOUT, POSITION_NAMES, type Position } from './strategy/positions';
+import { PLAYER_OPTIONS, POSITION_ABOUT, POSITION_NAMES, seatsFor, type Players, type Position } from './strategy/positions';
 
 const SITUATIONS: { value: Situation; label: string }[] = [
   { value: 'unopened', label: 'Folded to me' },
@@ -17,37 +17,60 @@ const SITUATIONS: { value: Situation; label: string }[] = [
 
 const KEY_TO_RANK: Record<string, Rank> = { '1': 'A', '0': 'T' };
 
+const STORAGE_KEY = 'preflop.players.v1';
+
+function loadPlayers(): Players {
+  try {
+    const n = Number(localStorage.getItem(STORAGE_KEY));
+    return (PLAYER_OPTIONS as readonly number[]).includes(n) ? (n as Players) : 6;
+  } catch {
+    return 6;
+  }
+}
+
 /** Keeps the villain valid for the hero and situation; picks the only option automatically. */
-function fixVillain(hero: Position, situation: Situation, villain: Position | null): Position | null {
-  const opts = villainOptions(hero, situation);
+function fixVillain(hero: Position, situation: Situation, villain: Position | null, players: Players): Position | null {
+  const opts = villainOptions(hero, situation, players);
   if (villain && opts.includes(villain)) return villain;
   return opts.length === 1 ? opts[0] : null;
 }
 
 export default function App() {
+  const [players, setPlayers] = useState<Players>(loadPlayers);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [hero, setHero] = useState<Position>('BTN');
   const [situation, setSituation] = useState<Situation>('unopened');
   const [villain, setVillain] = useState<Position | null>(null);
   const [cards, setCards] = useState<Rank[]>([]);
   const [suited, setSuited] = useState(false);
 
-  const spot: Spot = { hero, situation, villain };
+  const spot: Spot = { hero, situation, villain, players };
   const code: HandCode | null = cards.length === 2 ? handCode(cards[0], cards[1], suited) : null;
   const advice = recommend(spot, code);
   const isPair = cards.length === 2 && cards[0] === cards[1];
 
-  const changeHero = (p: Position) => {
-    setHero(p);
-    let s = situation;
-    // Situations that cannot happen from this seat fall back to the first one that can.
-    if ((s === 'vs-open' && p === 'UTG') || (s === 'vs-3bet' && p === 'BB')) s = 'unopened';
-    setSituation(s);
-    setVillain(fixVillain(p, s, villain));
+  // Moves to a valid seat, situation and villain for the table size; impossible choices fall back to the first valid one.
+  const applySpot = (n: Players, p: Position, s: Situation) => {
+    const h = seatsFor(n).includes(p) ? p : 'BTN';
+    const sit = situationsFor(h, n).includes(s) ? s : 'unopened';
+    setHero(h);
+    setSituation(sit);
+    setVillain(fixVillain(h, sit, villain, n));
   };
-  const changeSituation = (s: Situation) => {
-    setSituation(s);
-    setVillain(fixVillain(hero, s, villain));
+  const changeHero = (p: Position) => applySpot(players, p, situation);
+  const changeSituation = (s: Situation) => applySpot(players, hero, s);
+  const changePlayers = (n: Players) => {
+    setPlayers(n);
+    applySpot(n, hero, situation);
   };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(players));
+    } catch {
+      /* storage unavailable: the table size just won't persist */
+    }
+  }, [players]);
 
   const pick = useCallback((r: Rank) => setCards((c) => (c.length >= 2 ? [r] : [...c, r])), []);
   const undo = useCallback(() => setCards((c) => c.slice(0, -1)), []);
@@ -81,26 +104,51 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [pick, undo, newHand]);
 
-  const vOpts = villainOptions(hero, situation);
-  const situationOptions = SITUATIONS.filter(
-    (s) => !((s.value === 'vs-open' && hero === 'UTG') || (s.value === 'vs-3bet' && hero === 'BB')),
-  );
+  const vOpts = villainOptions(hero, situation, players);
+  const situationOptions = SITUATIONS.filter((s) => situationsFor(hero, players).includes(s.value));
+  const tableLabel = `${players} players · 100 BB`;
 
   return (
     <div className="app">
       <header className="topbar">
         <h1>Pre-flop Strategy</h1>
-        <span className="settings-summary muted" data-testid="game-summary">
-          6-max cash · 100 BB
-        </span>
+        <div className="topbar-right">
+          <span className="settings-summary muted" data-testid="game-summary">
+            {tableLabel}
+          </span>
+          <button
+            type="button"
+            className={`icon-btn${settingsOpen ? ' icon-btn-on' : ''}`}
+            aria-label={settingsOpen ? 'Close table settings' : 'Table settings'}
+            aria-expanded={settingsOpen}
+            aria-controls="settings-panel"
+            onClick={() => setSettingsOpen((o) => !o)}
+            data-testid="settings-toggle"
+          >
+            {settingsOpen ? <CloseIcon /> : <SlidersIcon />}
+          </button>
+        </div>
       </header>
+
+      {settingsOpen ? (
+        <div className="settings" id="settings-panel">
+          <Segmented
+            label="Players at the table"
+            value={String(players)}
+            options={PLAYER_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
+            onChange={(v) => changePlayers(Number(v) as Players)}
+            hint={`Seats in play: ${seatsFor(players).join(', ')}. With fewer players the earliest seats go first, and every other seat keeps the same strategy.`}
+            testId="players"
+          />
+        </div>
+      ) : null}
 
       <main className="table">
         <div className="settings">
           <Segmented
             label="My seat"
             value={hero}
-            options={POSITIONS.map((p) => ({ value: p, label: p, title: POSITION_NAMES[p] }))}
+            options={seatsFor(players).map((p) => ({ value: p, label: p, title: POSITION_NAMES[p] }))}
             onChange={changeHero}
             testId="seat"
           />
@@ -169,5 +217,24 @@ export default function App() {
         </button>
       </nav>
     </div>
+  );
+}
+
+function SlidersIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
   );
 }
